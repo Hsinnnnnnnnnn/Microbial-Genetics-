@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分子生物學複習字卡</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    color: #2d3748;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  .subtitle {
+    color: #718096;
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .filter-btn {
+    padding: 6px 14px;
+    border: 2px solid #cbd5e0;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: #4a5568;
+    transition: all 0.2s;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    background: #4299e1;
+    border-color: #4299e1;
+    color: white;
+  }
+
+  /* ── Progress ── */
+  .progress-bar-wrap {
+    width: 100%;
+    max-width: 800px;
+    background: #e2e8f0;
+    border-radius: 8px;
+    height: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: #48bb78;
+    border-radius: 8px;
+    transition: width 0.4s;
+  }
+
+  .progress-label {
+    color: #718096;
+    font-size: 0.82rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* ── Card scene ── */
+  .scene {
+    width: 100%;
+    max-width: 800px;
+    perspective: 1200px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    width: 100%;
+    min-height: 280px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4,0,0.2,1);
+    cursor: pointer;
+  }
+
+  .card.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    width: 100%;
+    min-height: 280px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 16px;
+    padding: 32px 36px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  }
+
+  .card-front {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  .card-back {
+    background: white;
+    transform: rotateY(180deg);
+    border: 2px solid #e2e8f0;
+    color: #2d3748;
+  }
+
+  .card-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 12px;
+  }
+
+  .card-number {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    margin-bottom: 8px;
+  }
+
+  .card-text {
+    font-size: 1.05rem;
+    line-height: 1.75;
+  }
+
+  .card-text em { font-style: italic; }
+
+  .card-hint {
+    margin-top: 20px;
+    font-size: 0.78rem;
+    opacity: 0.65;
+    text-align: center;
+  }
+
+  .category-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    padding: 2px 10px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.22);
+  }
+
+  .card-back .category-tag {
+    background: #ebf8ff;
+    color: #2b6cb0;
+  }
+
+  /* ── Navigation ── */
+  .nav {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .btn {
+    padding: 10px 28px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .btn-primary { background: #4299e1; color: white; }
+  .btn-primary:hover { background: #3182ce; }
+  .btn-secondary { background: white; color: #4a5568; border: 2px solid #cbd5e0; }
+  .btn-secondary:hover { background: #f7fafc; }
+  .btn-success { background: #48bb78; color: white; }
+  .btn-success:hover { background: #38a169; }
+  .btn-warning { background: #ed8936; color: white; }
+  .btn-warning:hover { background: #dd6b20; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Shuffle / known counter ── */
+  .stats {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .stat-known { background: #c6f6d5; color: #276749; }
+  .stat-unknown { background: #fed7d7; color: #9b2c2c; }
+  .stat-total { background: #bee3f8; color: #2c5282; }
+
+  /* ── Known/Unknown buttons on card ── */
+  .mark-btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  .btn-known { background: #48bb78; color: white; }
+  .btn-known:hover { background: #38a169; }
+  .btn-unknown { background: #fc8181; color: white; }
+  .btn-unknown:hover { background: #e53e3e; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    color: #718096;
+    padding: 48px 0;
+    font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>分子生物學複習字卡</h1>
+<p class="subtitle">點擊卡片翻面查看答案</p>
+
+<div class="filter-bar" id="filterBar"></div>
+
+<div class="progress-bar-wrap">
+  <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+</div>
+<div class="progress-label" id="progressLabel">載入中…</div>
+
+<div class="stats">
+  <div class="stat-pill stat-total" id="statTotal">共 0 題</div>
+  <div class="stat-pill stat-known" id="statKnown">✓ 已掌握 0</div>
+  <div class="stat-pill stat-unknown" id="statUnknown">✗ 待複習 0</div>
+</div>
+
+<div class="scene">
+  <div class="card" id="mainCard" onclick="flipCard()">
+    <div class="card-face card-front" id="cardFront">
+      <div class="card-number" id="cardNumber"></div>
+      <div class="category-tag" id="cardCategory"></div>
+      <div class="card-label">問題</div>
+      <div class="card-text" id="cardQuestion"></div>
+      <div class="card-hint">點擊翻面查看答案 ▼</div>
+    </div>
+    <div class="card-face card-back" id="cardBack">
+      <div class="category-tag" id="cardCategoryBack"></div>
+      <div class="card-label">參考答案</div>
+      <div class="card-text" id="cardAnswer"></div>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="btn btn-secondary" onclick="prevCard()">← 上一題</button>
+  <button class="btn btn-primary" onclick="flipCard()">翻面</button>
+  <button class="btn btn-secondary" onclick="nextCard()">下一題 →</button>
+</div>
+
+<div class="mark-btns">
+  <button class="btn btn-known" onclick="markCard(true)">✓ 已掌握</button>
+  <button class="btn btn-unknown" onclick="markCard(false)">✗ 再複習</button>
+  <button class="btn btn-secondary" onclick="shuffleCards()">🔀 隨機排序</button>
+  <button class="btn btn-warning" onclick="filterUnknown()">只看未掌握</button>
+  <button class="btn btn-secondary" onclick="resetAll()">重置全部</button>
+</div>
+
+<script>
+const ALL_CARDS = [
+  // ── 類別一：DNA 複製機制 ──
+  {
+    category: "DNA 複製機制",
+    question: "某些病毒（如腺病毒）為了避免落後鏈（lagging-strand）合成的問題，會同時從兩端以領先鏈（leading-strand）的方向分別複製 DNA 的個別單鏈，最終完成整個分子的複製。為什麼細菌染色體不採取這種方式複製？",
+    answer: "細菌 DNA 的兩條鏈可能不以這種方式同時進行 3' 到 5' 方向的複製，是因為要複製像染色體這麼長的 DNA，這種方式會留下極長的單鏈區域，這些區域會非常不穩定或容易受到核酸酶（nucleases）的攻擊。"
+  },
+  {
+    category: "DNA 複製機制",
+    question: "為什麼 DNA 分子這麼長？擁有多個較短的 DNA 片段不是比較容易嗎？單一長 DNA 分子的優缺點為何？",
+    answer: "DNA 分子之所以非常長，可能是因為如果細胞包含許多短片段 DNA，在細胞分裂時，每一個片段都必須單獨且精確地分配（segregated）到子細胞中，這會增加分配的複雜度。"
+  },
+  {
+    category: "DNA 複製機制",
+    question: "為什麼細胞以 DNA 而非像某些病毒一樣以 RNA 作為遺傳物質？",
+    answer: "細胞之所以以 DNA 而非 RNA 作為遺傳物質，不只是因為 DNA 較穩定，也因為雙股 DNA 的 B-form helix 結構較規則，適合高精準度的 replication 與 repair。DNA replication 又仰賴 RNA primer 起始，因為最終遺傳物質是 DNA，所以這些 RNA 區段可被辨認為臨時成分並移除，再由高保真的 DNA polymerase 以鄰近 DNA 的 3' 端為起點補回。這樣可以避免起始區域留下較難校對的錯誤，進而提高整體 genome 複製的正確性。"
+  },
+  {
+    category: "DNA 複製機制",
+    question: "對於 dnaA 基因（編碼啟始蛋白 DnaA）發生溫度敏感突變的菌株，將其轉移到高溫（非許可溫度）對 DNA 合成速率有何影響？速率會呈線性還是指數下降？曲線斜率是否會受到轉移時細胞生長速率的影響？請解釋。",
+    answer: "溫度轉移會導致 DNA 合成速率下降，但不會過於突然。每個細胞會完成在轉移時已經開始的複製輪次，但不會開啟新的一輪。合成速率會呈指數下降。如果細胞生長迅速，下降的斜率會較緩，因為每個分子中已有數個複製輪次正在進行，且每個輪次都必須完成。"
+  },
+  {
+    category: "DNA 複製機制",
+    question: "迴旋酶（gyrase）抑制劑 novobiocin 會抑制幾乎所有類型的細菌生長。對於產生這種抗生素的細菌 Streptomyces sphaeroides，你對其迴旋酶有何預測？你會如何測試你的假設？",
+    answer: "Streptomyces sphaeroides 的迴旋酶可能天生就對 novobiocin 具備抗性。你可以純化該迴旋酶，並在體外（in vitro）存在 novobiocin 的情況下，測試其在 DNA 中引入超螺旋的能力。"
+  },
+  {
+    category: "DNA 複製機制",
+    question: "你認為在大腸桿菌（E. coli）這類細菌中，染色體複製與細胞分裂是如何協調的？你會如何測試你的假設？",
+    answer: "目前尚不完全清楚這兩者如何協調。一個假設是：細胞分裂所需的蛋白質可能由位於終止區域（termination region）附近的基因編碼，且該基因僅在該區域複製時才轉錄。因此，細胞分裂僅能在終止區域複製後開始。測試方法可以嘗試將複製終止位點移動到染色體的其他位置，觀察是否會影響細胞分裂的時機。"
+  },
+  {
+    category: "DNA 複製機制",
+    question: "為什麼染色體複製的終止機制如此「鬆散」，以至於 ter 區域對生長而言並非必要，且每個方向都需要多個 ter 位點才能完全停止複製叉？染色體上沒有一個絕對的終止點有什麼優點？",
+    answer: "目前尚無確切答案，但這可能允許更多的基因組重組（如倒位或重複），這在進化中扮演重要角色。如果複製必須在特定序列停止，重組可能會導致整個 DNA 無法完成複製。允許部分「讀過」（readthrough）現象可以讓少數細胞在基因重排後存活，進而找到更有效的基因排列。"
+  },
+
+  // ── 類別二：PCR 與分子工具 ──
+  {
+    category: "PCR 與分子工具",
+    question: "你正以 5'ACCTTACCGTAATCC3' 為模板並利用上游引子合成 DNA。你在反應混合物中加入了三種去氧核苷三磷酸，但漏掉了第四種——去氧胞嘧啶三磷酸（dCTP）。你會合成出什麼樣的 DNA？",
+    answer: "5'GGATTA3'（記得 5'→3'，遇到 template 上的 G 就停止，因為缺少 dCTP 無法配對 G）"
+  },
+  {
+    category: "PCR 與分子工具",
+    question: "利用相同的模板與上游引子合成 DNA，但這次除了加入其他三種 dNTPs 外，你加入的是等量的複製抑制劑 dideoxythymidine triphosphate (ddTTP) 與正常的去氧胸苷三磷酸 (dTTP) 混合物。你會合成出哪些 DNA？",
+    answer: "找出哪些位置本來要加 T，那些位置都可能提早停下來。會產生四種長度不一的片段：5'GGAddT3'、5'GGATddT3'、5'GGATTACCGGddT3'、5'GGATTACCGGTAAGAddT3'"
+  },
+  {
+    category: "PCR 與分子工具",
+    question: "請設計一個下游 PCR 引子（downstream PCR primer），用以擴增序列 5'CGATCTTAAT3' 上游的序列，並加入一個 EcoRI 限制酶位點以便進行選殖。",
+    answer: "5'NNGAATTCATTAAGATCG3'（N 代表任何去氧核苷酸）。互補後反向配對得 5'ATTAAGATCG3'，EcoRI 辨識序列 5'GAATTC3' 加到 5' 端，末端加 NN 保護鹼基，優先使用 G/C 減少末端 fraying。"
+  },
+  {
+    category: "PCR 與分子工具",
+    question: "請設計 PCR 引子以引入 Eam1104I 位點，從而將選殖載體上以 5'...GCGACGTACGA3' 結尾的序列，與插入片段上以 5'TACGAAGCTCT3' 開頭的序列進行無縫銜接。",
+    answer: "載體引子：5'NNCTCTTCGTACGTCGC3'；插入片段引子：5'NNCTCTTCTACGAAGCTCT3'。NN 為保護鹼基，CTCTTC 為 Eam1104I 識別位點，後接各自端點序列的反向互補或正向序列。"
+  },
+  {
+    category: "PCR 與分子工具",
+    question: "請設計一個 20 個核苷酸的 PCR 引子（upstream primer），藉此引入 BamHI 限制酶位點，以便將起始序列為 ATGUUGCGATTU 的蛋白質編碼序列，選殖到 His-tag 載體下游（載體上的轉譯起始序列末端含有 GGATCCT）。",
+    answer: "建議使用 5'CCGGATCCATGTTGCGATTT3'。5' 端加 CC 幫助 BamHI 有效切割；GGATCC 為 BamHI 位點；後接 insert 起始序列 ATGTTGCGATTT，維持與 His-tag 的 reading frame。"
+  },
+  {
+    category: "PCR 與分子工具",
+    question: "請概述如何利用 PCR、選殖以及親和標籤（affinity tag）融合技術，來純化一個功能未知但序列已知的編碼蛋白。",
+    answer: "通常建議從 cDNA 進行 PCR 擴增，以避免真核基因中內含子的干擾。需利用反轉錄酶合成 cDNA，並設計引子在 5' 端加入限制酶位點，以便與載體上的 His-tag 進行閱讀框融合。將載體轉入 E. coli 並誘導表現後，利用親和層析管柱純化融合蛋白，最後可利用序列專一性蛋白酶將標籤切除。"
+  },
+
+  // ── 類別三：細胞週期與拓撲酶 ──
+  {
+    category: "細胞週期與拓撲酶",
+    question: "你正在培養一代時間（generation time）僅為 25 分鐘的 E. coli。其 I period、C period 與 D period 分別會是多長？",
+    answer: "I = 25 min, C = 40 min, D = 20 min。I period = inter-initiation period = generation time。因為 25 min 遠小於 C + D = 60 min，所以發生 multifork replication（重疊複製輪次）。"
+  },
+  {
+    category: "細胞週期與拓撲酶",
+    question: "你正在培養一代時間為 90 分鐘的 E. coli。其 I、C 與 D periods 分別會是多長？",
+    answer: "I = 90 min, C = 40 min, D = 20 min。因為 generation time（90 min）> C + D（60 min），每個複製輪次在下一輪開始前便已完成，不需 multifork replication。"
+  },
+  {
+    category: "細胞週期與拓撲酶",
+    question: "你正在測量來自 E. coli topA mutant（缺少主要的 type I topoisomerase）的質體超螺旋狀態，並與無突變的 E. coli 質體進行比較。你預期突變株的質體中會有較多還是較少的負超螺旋 (negative supercoils)？為什麼？",
+    answer: "預期突變株中會有較多的負超螺旋。因為 topA 突變株缺少 topoisomerase I（該酵素的功能是移除負超螺旋），所以在突變株的 DNA 中會累積更多的負超螺旋。"
+  },
+
+  // ── 類別四：轉譯與遺傳密碼 ──
+  {
+    category: "轉譯與遺傳密碼",
+    question: "你認為在地球最早期的生命中，最先出現的是 DNA、RNA 還是蛋白質？為什麼？",
+    answer: "有些人認為 RNA 最先出現，因為負責連接胺基酸以製造蛋白質的肽醯轉移酶（peptidyl-transferase）其實是 23S rRNA，且其他一些酶也是由 RNA 組成的。然而，這個問題目前仍處於推測階段。"
+  },
+  {
+    category: "轉譯與遺傳密碼",
+    question: "為什麼遺傳密碼（Genetic code）是通用的？",
+    answer: "遺傳密碼之所以通用，可能是因為一旦這套密碼體系建立起來，涉及轉譯密碼的組件（如胺基醯-tRNA 合成酶等）實在太多了，導致無法在不破壞系統的情況下更改其中任何一部分。"
+  },
+  {
+    category: "轉譯與遺傳密碼",
+    question: "為什麼你認為原核生物擁有多順反子 mRNA（polycistronic mRNAs），而真核生物卻沒有？",
+    answer: "真核生物極少擁有包含多個編碼區 mRNA 的原因仍待推測。這可能與 mRNA 在轉譯前必須先從細胞核輸出到細胞質的必要性有關。"
+  },
+  {
+    category: "轉譯與遺傳密碼",
+    question: "為什麼你認為粒線體基因的遺傳密碼與染色體基因有所不同？",
+    answer: "這是因為粒線體曾是擁有自己簡單轉譯設備（如核糖體等）的細菌。這套轉譯系統一直與染色體基因的轉譯系統保持獨立運作，因此它們各自演化出了不同的路徑。"
+  },
+  {
+    category: "轉譯與遺傳密碼",
+    question: "為什麼硒半胱胺酸（Selenocysteine）幾乎存在於所有生物的蛋白質中，卻僅出現在這些生物極少數蛋白質的少數位點上？",
+    answer: "硒半胱胺酸可能是早期生物中有用過程的遺跡。它幾乎存在於所有生物是因為在特定 redox enzyme 的 active site 中具有高度催化優勢；但只出現在少數位點是因為 Sec 需要把 UGA stop codon 重新解讀，插入機制複雜、成本高、錯誤風險大，且 selenium 本身具有限量與毒性問題。"
+  },
+  {
+    category: "轉譯與遺傳密碼",
+    question: "為什麼有這麼多抗生素是抑制轉譯過程，而不是抑制胺基酸的生物合成？",
+    answer: "因為轉譯設備在進化上高度保守，抑制某一類細菌 ribosome 的抗生素通常也能抑制所有細菌的轉譯；且 bacterial ribosome 與宿主 ribosome 有明顯差異，提供良好藥物靶點。相較之下，胺基酸生物合成途徑在不同細菌間差異較大，容易被外源胺基酸補救，較難具備廣譜性。"
+  },
+  {
+    category: "轉譯與遺傳密碼",
+    question: "你認為為什麼 chaperonins（分子伴隨蛋白）擁有兩個相連的腔室，且在兩個腔室之間交替進行蛋白質的摺疊？",
+    answer: "一種觀點認為這與調節以及接收需摺疊的蛋白質有關。其中一個腔室扮演調節角色，負責辨識從核糖體出口孔露出的蛋白質序列；另一個腔室則從 N 端接收蛋白質。雙腔室結構能確保兩端距離足夠遠，以同時履行這兩種職責，而不必製造更長的單一結構。"
+  },
+  {
+    category: "轉譯與遺傳密碼",
+    question: "為什麼有些蛋白質擁有專門的膜運送系統，而不是使用通用的 Sec 分泌系統？為什麼不是所有分泌蛋白都使用 Sec 系統？",
+    answer: "Sec 系統主要運送未折疊蛋白且通常只能穿過革蘭氏陰性菌的內膜，分泌蛋白需要自己的系統穿過外膜。將內外膜的運送系統直接耦合（Coupled）可能更有效率，因為能量（ATP 或膜電位）都存在於內膜或細胞質中。此外，擁有專門系統可避免與其他蛋白質競爭 SecYEG 通道。"
+  },
+  {
+    category: "轉譯與遺傳密碼",
+    question: "你認為內膜蛋白的跨膜域（Transmembrane domains）是如何從 SecYEG 通道「逃逸」進入內膜的？",
+    answer: "目前具體機制尚不清楚。一種可能性是像 YidC 這樣的蛋白質會協助打開 SecYEG 通道，讓跨膜域在穿過通道時移入內膜。此外，這些結構域極強的疏水性也可能助於開啟通道。"
+  },
+  {
+    category: "轉譯與遺傳密碼",
+    question: "請列出你能想到的所有細菌調節其基因表現的原因。",
+    answer: "節省能量與資源（不製造目前不需要的 enzyme）；適應營養來源變化（如有 lactose 才啟動 lac operon）；回應代謝產物濃度（如 tryptophan 足夠時關閉 trp operon）；回應環境壓力（heat shock、oxidative stress）；調控毒力與生存策略（感染宿主時才表現 toxins、adhesins）。"
+  },
+
+  // ── 類別五：ORF 與轉錄 ──
+  {
+    category: "ORF 與轉錄",
+    question: "在 mRNA 序列 5'AGCUAACUGAUGUGAUGUCAACGUCCUACUCUACGUACGUAGUCUAAAG3' 中，最長的 Open Reading Frame (ORF) 是什麼？請記得檢查所有三個閱讀框。",
+    answer: "5' AUG UCA ACG UCC UAC UCU ACG UAC GUA GUC UAA 3'"
+  },
+  {
+    category: "ORF 與轉錄",
+    question: "在 mRNA 序列 5'UAAGUGAAAGAUGUGAAUGAAGUAGCCACCAAAGUCACUAAUGCUUCCAACA3' 中，你認為轉譯最可能從哪裡開始？為什麼？",
+    answer: "轉譯最可能從第 41 位的 AUG 開始。原因是前面兩個 AUG 都形成非常短的 upstream open reading frame，很快就被 stop codon 終止，不太像真正主要蛋白質的起始點。不過，這個假設仍需透過實驗驗證。"
+  },
+  {
+    category: "ORF 與轉錄",
+    question: "以下哪一個序列較可能是 factor-independent（因子不依賴型）轉錄終止位點？\na. 3'AACGACTAGTAGCACATACTAGTCGTTGGCAAAAAAATGCA5'\nb. 3'ACTAGCCTAAGCATCTTGCATCAGGCAGAAAAAAAAAAATCGCA5'",
+    answer: "選項 (a)。雖然兩者都有一連串的 A（即 poly-U tract on RNA），但只有 (a) 在其前方具有一個能使 mRNA 形成 hairpin loop（髮夾結構）的反向重複序列。Factor-independent termination 需要 GC-rich inverted repeat（形成 stem-loop）加上後接的 poly-U tract。"
+  },
+  {
+    category: "ORF 與轉錄",
+    question: "如果一個突變導致操縱子的調節蛋白（regulatory protein）失活，對該操縱子的表現有何影響？請分別討論：a. 負向調節 (Negative regulation)  b. 正向調節 (Positive regulation)",
+    answer: "a. 負向調節：操縱子將呈現構成性表現（constitutive expression），意即即使沒有加入誘導劑，基因也會持續表現。\nb. 正向調節：操縱子的表現將被關閉（turned off），且無法被誘導。"
+  },
+  {
+    category: "ORF 與轉錄",
+    question: "請定義 homolog、ortholog 與 paralog。",
+    answer: "Homolog：只要兩個基因或蛋白質來自共同祖先，就稱為 homologs（最廣義）。Ortholog：因物種分化（speciation）而分開，通常出現在不同物種之間，常保有相似功能。Paralog：因基因複製（gene duplication）而分開，可在同一物種內，功能可能相似或分化。"
+  },
+  {
+    category: "ORF 與轉錄",
+    question: "請定義 COG 與 TIGRFAM equivalogs。",
+    answer: "COG（Clusters of Orthologous Groups）：把來自不同生物的蛋白質依據演化關係分成一群群的資料庫分類，每個 COG 代表一組源自共同祖先基因的蛋白質，常用來推測新基因的功能。TIGRFAM equivalog：是 TIGRFAMs 資料庫中功能也保守的同源群，使用 hidden Markov model（HMM）辨識特定 protein family，每個 entry 包含 seed alignment、HMM model、cutoff score 及 annotation。"
+  },
+
+  // ── 類別六：突變與遺傳學 ──
+  {
+    category: "突變與遺傳學",
+    question: "單一的倒位突變（Inversion mutation）會大幅改變遺傳地圖或 DNA 中的基因順序。既然如此，為什麼鼠傷寒沙門氏菌（S. enterica serovar Typhimurium）與大腸桿菌（E. coli）的遺傳地圖卻如此相似？",
+    answer: "目前尚不清楚確切原因。有一種可能性是染色體上的基因排列存在一種「最佳方式」，例如高表現量的基因通常靠近複製起點，且轉錄方向與複製方向相同，這種排列會被自然選擇保留下來，而偏離此排列的變異則會被汰換掉。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "你認為重複突變（Duplication mutations）在演化中扮演某種角色嗎？如果是，為什麼它們不會在形成後迅速被重組作用破壞？",
+    answer: "重複突變允許生物體的基因數量增加。這些多出來的基因隨後可以演化，使其產物執行新的功能。有時特定區域的重複在特定環境下具有選擇優勢，因此該重複結構會被保留下來而不被破壞。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "為什麼你認為無義抑制子（Nonsense suppressors）存在於低等生物中，卻不存在於高等生物中？",
+    answer: "高等生物的細胞調節可能更為精細。由於無義抑制會導致轉譯「讀過頭（runthrough）」，在基因末端產生更複雜且難以耐受的異常蛋白質，這對高等生物而言問題更嚴重。此外，高等生物可能更有效地降解異常蛋白，或者這些蛋白可能會觸發免疫反應。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "你能提出一個關於「定向突變（Directed mutation）」可能發生的機制嗎？",
+    answer: "目前尚不清楚最純粹形式的定向或適應性突變是如何發生的。一種假說是細胞能以某種方式「感知」到某種突變是有利的，並據此改變 DNA 序列。然而，這需要一種從蛋白質產物回傳訊息到 DNA 的機制。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "在一組皆由少數野生型細菌開始培養的培養液中，哪種培養液最可能具有最早發生的特定突變：是那些只有少數突變細菌的，還是那些具有許多突變細菌的培養液？",
+    answer: "具有最多突變細菌的培養液，最可能是突變發生得最早。若突變在培養早期就隨機發生，該突變細胞會繼續分裂形成大量後代。若突變很晚才發生，只會出現少數突變株。這也是 Luria–Delbrück fluctuation test 中的 jackpot culture 現象。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "你預期哪種表型會有較高的突變率：Rifampin 抗性 (Rifʳ) 還是精胺酸營養缺陷型 (Arg−)？請解釋原因。",
+    answer: "Arg− 的突變率預期會高於 Rifʳ。Rifʳ 通常只能由 rpoB gene 中少數特定位點突變造成，且突變後 RNA polymerase 還必須保有功能，可接受的突變種類很少。相對地，Arg− 是 arginine biosynthesis pathway 的 loss-of-function phenotype，任何參與精胺酸合成的基因只要失活都可能造成 Arg−，mutational target size 較大，突變率也較高。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "Luria 和 Delbrück 將 100 份各 1 ml 的培養液培養至每 ml 含有 2×10⁹ 個細菌。測量後：20 份沒有抗性菌，35 份有 1 個，20 份有 2 個，25 份有 3 個或更多。請利用卜瓦松分布 (Poisson distribution) 計算 T1 抗性的突變率。",
+    answer: "約為 8×10⁻¹⁰。利用卜瓦松分布，P(0) = e^(−m) = 20/100 = 0.2，解得 m ≈ 1.6，即平均每管有 1.6 個突變株。突變率 = m / (每管菌數) = 1.6 / (2×10⁹) ≈ 8×10⁻¹⁰。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "Newcombe 實驗：培養 4 h 後 1 號皿噴 T1，2 號皿稀釋 10⁷ 倍重新塗布計菌數；再培養 2 h 後 3 號皿噴 T1，4 號皿稀釋 10⁸ 倍。計數：1 號 10 菌落，2 號 20，3 號 120，4 號 22。請計算 T1 抗性的突變率。",
+    answer: "5.5×10⁻⁸。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "你分離出 Klebsiella pneumoniae 的 Arg− 缺陷株：\na. arg-1 突變：少量細胞塗布無精胺酸培養基形成微小菌落，大量（10⁸）塗布出現大菌落。arg-1 可能為何種突變？\nb. arg-2 突變：在無精胺酸培養基上完全不生長（即使 >10⁸ 個細胞）。arg-2 可能為何種突變？\nc. 針對 (a)(b) 還有哪些可能的解釋？",
+    answer: "a. arg-1 很可能是滲漏型錯義突變（leaky missense mutation），仍保有部分基因產物活性，且會發生回覆突變或 suppressor mutation。\nb. arg-2 很可能是缺失突變（deletion mutation），因為缺失突變通常不容易真正回復。\nc. arg-1 也可能是位於基因末端的 frameshift mutation（蛋白質仍有部分功能）；arg-2 也可能是 double mutant（需同時回復兩個突變，機率極低）。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "請設計一個實驗來證明大腸桿菌的 dam 突變具有誘變性（即顯示出比正常更高的自發突變率）。假設你可以直接取得 Dam− 突變株及其等基因親本。",
+    answer: "比較 dam− strain 與等基因 dam+ parent 的自發突變率。建立兩個背景中的 arg mutation（Arg−），形成 arg dam 雙突變株與單純 arg 突變株。分別建立多管獨立培養液，培養後塗布在不含 arginine 的 minimal medium 上，計算 Arg+ revertants 的數量。若 arg dam 雙突變株產生 Arg+ revertants 的頻率顯著高於 arg 單突變株，即可證明 dam mutation 會提高自發突變率（因為 Dam methylase 缺失會干擾 mismatch repair 的新舊股辨識）。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "為什麼必須從不同的培養液中分離突變株，才能確定獲得的是獨立突變（即非同胞 siblings）？",
+    answer: "必須從不同培養液中分離突變株，是為了確保它們是 independent mutations，而不是同一個早期突變細胞分裂出來的 siblings。如果多個突變株都來自同一管培養液，它們可能源自同一個祖先突變細胞，雖然形成多個菌落，遺傳上卻代表同一次突變事件。這樣會高估突變數量，也無法反映造成該 phenotype 的不同 mutation types。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "請設計正向選擇（Positive selection）給：\na. 對抗生素 Coumermycin 具抗性的突變株\nb. trp 突變的回覆突變（Revertants）\nc. 能緩解 dnaA 溫敏突變的抑制突變\nd. 在 araA 具有抑制突變的突變株，能緩解 araD 突變引起的阿拉伯糖敏感性\ne. 在 sutA 基因發生突變，能緩解 hisC 突變對 hisB 基因產生的極性影響",
+    answer: "a. 將大量細菌塗布在含 Coumermycin 的培養基上。\nb. 將大量 Trp− 細菌塗布在不含 tryptophan 的 minimal medium 上。\nc. 將 dnaA(Ts) 突變株大量塗布在非許可高溫的培養皿上，篩選能在高溫下生長的菌落。\nd. 將 araD 突變株大量塗布在含 L-阿拉伯糖及另一種碳源的培養基上。\ne. 建構部分二倍體，塗布在缺乏 histidine 的 minimal medium 上，篩選能生長的菌落。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "為基因產物是細胞生長所必需的「可逆溫敏突變（Reversible, temperature-sensitive mutants）」設計一個富集程序（Enrichment procedure）。",
+    answer: "利用 ampicillin enrichment。先在 permissive 低溫下培養細胞，再轉到 nonpermissive 高溫，temperature-sensitive mutants 因 essential gene product 失去功能而停止生長，野生型細胞繼續生長。加入 ampicillin 優先殺死正在生長並合成 cell wall 的野生型細胞，保留停止生長的 temperature-sensitive mutants。之後洗掉 ampicillin，重新在低溫培養，使可逆的突變株恢復生長。重複富集後，再測試菌落是否低溫可生長、高溫不可生長。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "無義抑制突變（Nonsense suppressor mutations）是顯性還是隱性？為什麼？",
+    answer: "Nonsense suppressor mutations 通常是 dominant。因為這類突變多發生在 tRNA gene，使突變 tRNA 的 anticodon 能辨認 stop codon，並在該位置插入某個 amino acid，讓 translation 繼續進行。即使細胞內仍有正常 release factors 和正常 tRNA，突變 suppressor tRNA 仍能在 nonsense codon 處發揮作用，因此只要有一份 suppressor tRNA gene 就可能產生抑制效果，不需要失去正常 allele 的功能。"
+  },
+  {
+    category: "突變與遺傳學",
+    question: "你有一株假單胞菌（Pseudomonas）因三個基因的無義突變而需要精胺酸、組胺酸與絲胺酸。將大量此菌株塗布在缺乏這三種胺基酸的培養基時，出現了一些能同時恢復這三種胺基酸合成能力的菌落。你認為是什麼原因？你會如何測試你的假設？",
+    answer: "三種表型同時回覆，最可能是產生了一個 nonsense suppressor mutation，而不是三個基因各自真正回復。可測試此菌株是否也能抑制其他已知 nonsense mutations，例如讓帶有 nonsense mutation 的 phage 在該菌株中增殖，或將此 suppressor 背景引入其他 nonsense mutant，觀察是否也能恢復其表型。"
+  },
+
+  // ── 類別七：接合與轉導 ──
+  {
+    category: "接合與轉導",
+    question: "一株 His+ Trp+ 但具有 argH 突變的 Hfr 菌株，與一株 Arg+ 但具有 hisG 與 trpA 突變的受體菌雜交。雜交後塗布於不含精胺酸、組胺酸與色胺酸的微量培養基。請問哪個是選取標記（Selected marker），哪些是未選取標記（Unselected markers）？",
+    answer: "Selected marker 是 trpA（因培養基缺乏 tryptophan，只有取得 donor trpA+ 的重組體能生長）。Unselected markers 是 argH 與 hisG（在已選出 trpA+ 重組體後再進一步檢查）。"
+  },
+  {
+    category: "接合與轉導",
+    question: "你將一株具有 hisB4 與 recA1 突變的 E. coli Hfr 菌株，與一株具有 thyA8 突變的菌株雜交，並塗布於不含胸腺嘧啶的培養基。大約 80% 的 Thy+ 重組體對紫外光極其敏感。請問 recA1 標記位於染色體上的什麼位置？",
+    answer: "recA1 marker 應位於非常靠近 thyA gene 的位置。因為 80% 的 Thy+ recombinants 同時變成 UV-sensitive，代表在取得 thyA+ 時，也很常一起取得 donor 的 recA1 mutation，兩個標記高比例共同轉移，代表 recA 與 thyA 在染色體上距離很近。"
+  },
+  {
+    category: "接合與轉導",
+    question: "一株 E. coli 菌株具有 metB1 (90 min)、leuA5 (2 min)、strA7 (73 min) 突變及卡那黴素抗性轉位子。與從 0 min 開始逆時針轉移的 Hfr 菌株（帶有 hisG2 (44 min) 突變）雜交，選取 Met+ 標記。在 100 個 Met+ 轉接子中：15 個為 His−，2 個為 Leu−，12 個對卡那黴素敏感。轉位子大約插入在哪個位置？",
+    answer: "Selected marker 是 metB1，unselected markers 是 leuA5、hisG2 與 Tn5 kanamycin-resistance。因為 kanamycin sensitivity 的共同遺傳頻率（12%）接近 hisG2（15%），因此 Tn5 插入位置應接近 44 min 的 hisG，大約在 44 min 稍微之前。"
+  },
+  {
+    category: "接合與轉導",
+    question: "你分離出一個大腸桿菌的 His− 突變株，懷疑它具有無義突變。你使用從 30 min 開始順時針轉移的 Hfr 菌株作為提供者，受體菌同時具有該抑制子、his 突變以及 argG 突變。你發現 80% 的 Arg+ 重組體為 His−。請問該抑制子突變位於何處？",
+    answer: "這個 intergenic suppressor mutation 應位於靠近 argG gene 的位置。因為 80% 的 Arg+ recombinants 同時變成 His−，代表 donor 在提供 argG+ 時，常常也一起帶入 suppressor locus 的野生型 allele，取代受體原本的 suppressor mutation，使 his nonsense mutation 不再被抑制。"
+  },
+  {
+    category: "接合與轉導",
+    question: "你想利用轉導（transduction）確定三個標記的順序是 metB1–argH5–rif-8 還是 argH5–metB1–rif-8。提供者有 rif-8 突變，受體菌有 metB1 與 argH5 突變，選 argH5 標記。結果：17 個 Arg+ Met+ Rifˢ，20 個 Arg+ Met− Rifˢ，60 個 Arg+ Met− Rifʳ，3 個 Arg+ Met+ Rifʳ。argH 與 metB、argH 與 rif 的共同轉導頻率及標記順序？",
+    answer: "以 Arg+ 為 selected transductants（共 100 個）。Arg+ Met+ 共 17+3=20 個，argH–metB cotransduction frequency = 20%。Arg+ Rifʳ 共 60+3=63 個，argH–rif cotransduction frequency = 63%。最少見的是 Arg+ Met+ Rifʳ（3 個），表示中間標記最可能是 argH，三者順序較支持 metB1–argH5–rif-8。"
+  },
+  {
+    category: "接合與轉導",
+    question: "你分離出一個不可回覆的大腸桿菌 hemA 突變株。你利用 Sau3A 對 E. coli DNA 進行部分消化（片段平均長度約 2 kbp），選殖入 BamHI 切割的 pBR322（4,500 kbp 基因組）。你大約需要測試多少個 Amp+ 轉型體，才有合理的機會找到能正常生長的菌落？",
+    answer: "理論上基因組 4,500 kbp，每個 insert 平均約 2 kbp，單一 clone 覆蓋 hemA 區域的機率約為 2/4500，至少要檢查約 4500/2 = 2250 個 Amp+ transformants 才接近一倍覆蓋。但考慮到片段大小分布不均、轉型效率等因素，實際應測試遠多於 4000 個。"
+  },
+  {
+    category: "接合與轉導",
+    question: "在你測試的一個轉型體菌落中，含有少數不再需要 δ-胺基左旋醣酸的細菌，但菌落中大部分細菌仍需要它。你認為該選殖株是否包含了完整的 hemA 基因？為什麼？這些少數轉型體的 HemA+ 表型是由於重組還是互補作用引起的？",
+    answer: "這個 clone 可能沒有包含完整且可表現的 hemA gene。如果 plasmid 上有完整 hemA+ 基因，應能以 complementation 的方式使同一菌落中大部分帶 plasmid 的細胞都變成 HemA+。現在只有少數細胞變成 HemA+，較可能是 plasmid insert 與染色體突變的 hemA 區域發生 homologous recombination，因此少數 HemA+ 表型較可能來自 recombination，而不是 plasmid complementation。"
+  },
+  {
+    category: "接合與轉導",
+    question: "請概述你會如何將負責合成精胺酸的 argH 基因，替換為插入了氯黴素抗性（Cmʳ）基因的對應基因。你預期此突變的表型為何？",
+    answer: "在自殺載體（suicide vector）上構築含有 argH 上下游同源臂，且中間插入 chloramphenicol resistance gene 的 DNA 片段。由於 suicide vector 無法在目標 E. coli 中自行複製，只有發生 homologous recombination（two crossover）的細胞能保留抗性標記。染色體上的正常 argH 會被 argH::Cmʳ 取代。接著選 Cmʳ colonies，確認其在缺乏 arginine 的 minimal medium 上無法生長。預期表型為 Cmʳ Arg−。"
+  }
+];
+
+// State
+let cards = [...ALL_CARDS];
+let currentIndex = 0;
+let isFlipped = false;
+let known = new Set();
+let unknown = new Set();
+let activeCategory = "全部";
+
+// Get all unique categories
+const categories = ["全部", ...new Set(ALL_CARDS.map(c => c.category))];
+
+function buildFilterBar() {
+  const bar = document.getElementById("filterBar");
+  categories.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "filter-btn" + (cat === activeCategory ? " active" : "");
+    btn.textContent = cat;
+    btn.onclick = () => setCategory(cat);
+    bar.appendChild(btn);
+  });
+}
+
+function setCategory(cat) {
+  activeCategory = cat;
+  document.querySelectorAll(".filter-btn").forEach((b, i) => {
+    b.classList.toggle("active", categories[i] === cat);
+  });
+  filterCards();
+}
+
+function filterCards() {
+  if (activeCategory === "全部") {
+    cards = [...ALL_CARDS];
+  } else {
+    cards = ALL_CARDS.filter(c => c.category === activeCategory);
+  }
+  currentIndex = 0;
+  isFlipped = false;
+  document.getElementById("mainCard").classList.remove("flipped");
+  render();
+}
+
+function filterUnknown() {
+  cards = ALL_CARDS.filter(c => unknown.has(ALL_CARDS.indexOf(c)) || (!known.has(ALL_CARDS.indexOf(c)) && !unknown.has(ALL_CARDS.indexOf(c))));
+  if (cards.length === 0) {
+    alert("太棒了！沒有標記「再複習」的題目囉。");
+    cards = [...ALL_CARDS];
+  }
+  currentIndex = 0;
+  isFlipped = false;
+  document.getElementById("mainCard").classList.remove("flipped");
+  render();
+}
+
+function render() {
+  if (cards.length === 0) {
+    document.getElementById("cardQuestion").innerHTML = "沒有符合條件的題目";
+    document.getElementById("cardAnswer").innerHTML = "";
+    return;
+  }
+
+  const card = cards[currentIndex];
+  const globalIdx = ALL_CARDS.indexOf(card);
+
+  document.getElementById("cardNumber").textContent = `第 ${currentIndex + 1} 題 / 共 ${cards.length} 題`;
+  document.getElementById("cardCategory").textContent = card.category;
+  document.getElementById("cardCategoryBack").textContent = card.category;
+  document.getElementById("cardQuestion").innerHTML = escapeHtml(card.question).replace(/\n/g, "<br>");
+  document.getElementById("cardAnswer").innerHTML = escapeHtml(card.answer).replace(/\n/g, "<br>");
+
+  // Progress (based on known)
+  const pct = ALL_CARDS.length > 0 ? Math.round(known.size / ALL_CARDS.length * 100) : 0;
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressLabel").textContent = `已掌握進度 ${pct}%（${known.size} / ${ALL_CARDS.length} 題）`;
+
+  // Stats
+  document.getElementById("statTotal").textContent = `共 ${ALL_CARDS.length} 題`;
+  document.getElementById("statKnown").textContent = `✓ 已掌握 ${known.size}`;
+  document.getElementById("statUnknown").textContent = `✗ 待複習 ${unknown.size}`;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById("mainCard").classList.toggle("flipped", isFlipped);
+}
+
+function nextCard() {
+  if (currentIndex < cards.length - 1) {
+    currentIndex++;
+    isFlipped = false;
+    document.getElementById("mainCard").classList.remove("flipped");
+    render();
+  }
+}
+
+function prevCard() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    isFlipped = false;
+    document.getElementById("mainCard").classList.remove("flipped");
+    render();
+  }
+}
+
+function markCard(isKnown) {
+  const card = cards[currentIndex];
+  const globalIdx = ALL_CARDS.indexOf(card);
+  if (isKnown) {
+    known.add(globalIdx);
+    unknown.delete(globalIdx);
+  } else {
+    unknown.add(globalIdx);
+    known.delete(globalIdx);
+  }
+  render();
+  if (currentIndex < cards.length - 1) nextCard();
+}
+
+function shuffleCards() {
+  for (let i = cards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
+  currentIndex = 0;
+  isFlipped = false;
+  document.getElementById("mainCard").classList.remove("flipped");
+  render();
+}
+
+function resetAll() {
+  known.clear();
+  unknown.clear();
+  cards = [...ALL_CARDS];
+  currentIndex = 0;
+  isFlipped = false;
+  activeCategory = "全部";
+  document.querySelectorAll(".filter-btn").forEach((b, i) => {
+    b.classList.toggle("active", i === 0);
+  });
+  document.getElementById("mainCard").classList.remove("flipped");
+  render();
+}
+
+// Keyboard navigation
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") nextCard();
+  else if (e.key === "ArrowLeft" || e.key === "ArrowUp") prevCard();
+  else if (e.key === " " || e.key === "Enter") { e.preventDefault(); flipCard(); }
+  else if (e.key === "k" || e.key === "K") markCard(true);
+  else if (e.key === "u" || e.key === "U") markCard(false);
+});
+
+buildFilterBar();
+render();
+</script>
+</body>
+</html>
